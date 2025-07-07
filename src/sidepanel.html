@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sideNote</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: #ffffff;
+      color: #333;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      font-size: 14px;
+    }
+    
+    .header {
+      padding: 16px 20px 12px 20px;
+      border-bottom: 1px solid #e5e5e5;
+      background-color: #fafafa;
+    }
+    
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    
+    .header-left {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 4px;
+    }
+    
+    .url-info {
+      font-size: 12px;
+      color: #666;
+      word-break: break-all;
+      line-height: 1.4;
+    }
+    
+    .close-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      color: #666;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+    
+    .close-btn:hover {
+      background-color: #f3f4f6;
+      color: #374151;
+    }
+    
+    .close-btn:active {
+      background-color: #e5e7eb;
+    }
+    
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      min-height: 0;
+    }
+    
+    .note-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    
+    .note-label {
+      font-weight: 500;
+      color: #555;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+    
+    .note-textarea {
+      flex: 1;
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      min-height: 200px;
+    }
+    
+    .note-textarea:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .note-textarea::placeholder {
+      color: #9ca3af;
+      font-style: italic;
+    }
+    
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0 0 0;
+      font-size: 12px;
+      color: #666;
+    }
+    
+    .save-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .save-status .indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #10b981;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    
+    .save-status.saving .indicator {
+      background-color: #f59e0b;
+      opacity: 1;
+    }
+    
+    .save-status.saved .indicator {
+      background-color: #10b981;
+      opacity: 1;
+    }
+    
+    .save-status.error .indicator {
+      background-color: #ef4444;
+      opacity: 1;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn {
+      padding: 4px 8px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      background-color: #ffffff;
+      color: #374151;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn:hover {
+      background-color: #f9fafb;
+      border-color: #9ca3af;
+    }
+    
+    .btn:active {
+      background-color: #f3f4f6;
+    }
+    
+    .btn.danger {
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+    
+    .btn.danger:hover {
+      background-color: #fef2f2;
+      border-color: #fca5a5;
+    }
+    
+    .footer {
+      padding: 16px 20px;
+      border-top: 1px solid #e5e5e5;
+      background-color: #fafafa;
+      font-size: 11px;
+      color: #666;
+    }
+    
+    .storage-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .storage-warning {
+      color: #f59e0b;
+      font-weight: 500;
+    }
+    
+    .storage-critical {
+      color: #dc2626;
+      font-weight: 500;
+    }
+    
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      color: #666;
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    .note-meta {
+      font-size: 11px;
+      color: #888;
+      margin-top: 4px;
+    }
+    
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #666;
+    }
+    
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.3;
+    }
+    
+    .empty-state-text {
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    
+    .empty-state-subtext {
+      font-size: 12px;
+      color: #999;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <div class="header-left">
+        <h1>sideNote</h1>
+        <div class="url-info" id="urlInfo">Loading...</div>
+      </div>
+      <button class="close-btn" id="closeBtn" title="Close side panel">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+  
+  <div class="content">
+    <div class="loading" id="loadingState">
+      <div>Loading note...</div>
+    </div>
+    
+    <div class="note-container hidden" id="noteContainer">
+      <div class="note-label">Your note for this page:</div>
+      <textarea 
+        id="noteTextarea" 
+        class="note-textarea" 
+        placeholder="Type your note here... It will be saved automatically and appear every time you visit this page."
+        spellcheck="true"
+      ></textarea>
+      <div class="note-meta" id="noteMeta"></div>
+      
+      <div class="status-bar">
+        <div class="save-status" id="saveStatus">
+          <div class="indicator"></div>
+          <span id="saveStatusText">Ready</span>
+        </div>
+        <div class="actions">
+          <button class="btn" id="exportBtn">Export</button>
+          <button class="btn danger" id="clearBtn">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="footer">
+    <div class="storage-info">
+      <span id="storageInfo">Storage: Calculating...</span>
+      <span>Alt+N to save</span>
+    </div>
+  </div>
+  
+  <script src="sidepanel.js"></script>
+</body>
+</html> 

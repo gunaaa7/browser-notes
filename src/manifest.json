@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "sideNote",
+  "version": "1.0.0",
+  "description": "Friction-free note-taking directly inside any web page. Your notes resurface automatically on every visit.",
+  
+  "permissions": [
+    "storage",
+    "activeTab",
+    "sidePanel",
+    "tabs"
+  ],
+  
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  
+  "background": {
+    "service_worker": "background.js"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  
+  "action": {
+    "default_title": "sideNote - Quick notes for this page"
+  }
+} 
