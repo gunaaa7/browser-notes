@@ -13,7 +13,7 @@
   const saveStatus = document.getElementById('saveStatus');
   const saveStatusText = document.getElementById('saveStatusText');
   const storageInfo = document.getElementById('storageInfo');
-  const exportBtn = document.getElementById('exportBtn');
+  const viewAllBtn = document.getElementById('viewAllBtn');
   const clearBtn = document.getElementById('clearBtn');
   const closeBtn = document.getElementById('closeBtn');
   
@@ -263,30 +263,15 @@
     }
   }
   
-  // Export all notes
-  async function exportNotes() {
+  // Open dashboard with all notes
+  async function openDashboard() {
     try {
-      const response = await chrome.runtime.sendMessage({
-        action: 'exportNotes'
+      await chrome.tabs.create({
+        url: chrome.runtime.getURL('dashboard.html')
       });
-      
-      if (response.success && response.data) {
-        const blob = new Blob([response.data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `sideNote-export-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } else {
-        throw new Error(response.error || 'Failed to export notes');
-      }
-      
     } catch (error) {
-      console.error('Error exporting notes:', error);
-      alert('Failed to export notes. Please try again.');
+      console.error('Error opening dashboard:', error);
+      alert('Failed to open dashboard. Please try again.');
     }
   }
   
@@ -406,8 +391,8 @@
     // Clear button
     clearBtn.addEventListener('click', clearNote);
     
-    // Export button
-    exportBtn.addEventListener('click', exportNotes);
+    // View all notes button
+    viewAllBtn.addEventListener('click', openDashboard);
     
     // Close button
     closeBtn.addEventListener('click', closeSidePanel);

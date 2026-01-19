@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sideNote Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+      color: #1f2937;
+      min-height: 100vh;
+    }
+    
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 24px 40px;
+    }
+    
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    
+    .title h1 {
+      font-size: 24px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+    
+    .title p {
+      margin-top: 6px;
+      color: #6b7280;
+      font-size: 13px;
+    }
+    
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    .btn {
+      padding: 8px 14px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      background-color: #ffffff;
+      color: #374151;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .btn:hover {
+      background-color: #f3f4f6;
+      border-color: #9ca3af;
+    }
+    
+    .stats {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    
+    .notes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    
+    .note-card {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .note-header {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .note-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #111827;
+      word-break: break-word;
+    }
+    
+    .note-meta {
+      font-size: 11px;
+      color: #6b7280;
+    }
+    
+    .note-content {
+      font-size: 13px;
+      line-height: 1.5;
+      color: #374151;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-top: 1px solid #f1f5f9;
+      padding-top: 10px;
+    }
+    
+    .note-link {
+      font-size: 12px;
+      color: #2563eb;
+      text-decoration: none;
+    }
+    
+    .note-link:hover {
+      text-decoration: underline;
+    }
+    
+    .empty-state {
+      padding: 60px 20px;
+      text-align: center;
+      color: #6b7280;
+      border: 1px dashed #d1d5db;
+      border-radius: 14px;
+      background-color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div class="title">
+        <h1>sideNote Dashboard</h1>
+        <p>All your notes across the web, in one place.</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn" id="exportBtn">Export notes</button>
+      </div>
+    </div>
+    
+    <div class="stats">
+      <span id="noteCount">0 notes</span>
+    </div>
+    
+    <div id="emptyState" class="empty-state hidden">
+      No notes yet. Add a note from the side panel to see it here.
+    </div>
+    
+    <div id="notesList" class="notes-grid"></div>
+  </div>
+  
+  <script src="dashboard.js"></script>
+</body>
+</html>
