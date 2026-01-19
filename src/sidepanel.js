@@ -9,6 +9,7 @@
   const loadingState = document.getElementById('loadingState');
   const noteContainer = document.getElementById('noteContainer');
   const noteTextarea = document.getElementById('noteTextarea');
+  const noteTitle = document.getElementById('noteTitle');
   const noteMeta = document.getElementById('noteMeta');
   const saveStatus = document.getElementById('saveStatus');
   const saveStatusText = document.getElementById('saveStatusText');
@@ -21,6 +22,7 @@
   let currentUrl = '';
   let canonicalUrl = '';
   let currentNote = null;
+  let currentPageTitle = '';
   let saveTimer = null;
   let isDirty = false;
   
@@ -52,6 +54,7 @@
       if (tab.url !== currentUrl) {
         // URL has changed, need to reload
         currentUrl = tab.url;
+        currentPageTitle = tab.title || '';
         currentNote = null;
         isDirty = false;
         
@@ -110,9 +113,11 @@
         
         // Populate textarea
         if (currentNote) {
+          noteTitle.value = currentNote.title || currentPageTitle || extractTitle(currentUrl);
           noteTextarea.value = currentNote.content || '';
           updateNoteMeta(currentNote);
         } else {
+          noteTitle.value = currentPageTitle || extractTitle(currentUrl);
           noteTextarea.value = '';
           noteMeta.textContent = '';
         }
@@ -194,7 +199,7 @@
           url: currentUrl,
           noteData: {
             content: content,
-            title: extractTitle(currentUrl)
+            title: (noteTitle.value || '').trim() || currentPageTitle || extractTitle(currentUrl)
           }
         });
         
@@ -291,7 +296,7 @@
             url: currentUrl,
             noteData: {
               content: content,
-              title: extractTitle(currentUrl)
+              title: (noteTitle.value || '').trim() || currentPageTitle || extractTitle(currentUrl)
             }
           });
         }
@@ -382,6 +387,11 @@
       isDirty = true;
       autoSave();
     });
+
+    noteTitle.addEventListener('input', () => {
+      isDirty = true;
+      autoSave();
+    });
     
     // Textarea focus
     noteTextarea.addEventListener('focus', () => {
@@ -419,7 +429,7 @@
             url: currentUrl,
             noteData: {
               content: content,
-              title: extractTitle(currentUrl)
+              title: (noteTitle.value || '').trim() || currentPageTitle || extractTitle(currentUrl)
             }
           }).then(response => {
             if (response.success) {
@@ -498,7 +508,7 @@
           url: currentUrl,
           noteData: {
             content: noteTextarea.value.trim(),
-            title: extractTitle(currentUrl)
+            title: (noteTitle.value || '').trim() || currentPageTitle || extractTitle(currentUrl)
           }
         });
       }

@@ -122,6 +122,28 @@
       color: #9ca3af;
       font-style: italic;
     }
+
+    .note-title-input {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      margin-bottom: 10px;
+    }
+
+    .note-title-input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .note-title-input::placeholder {
+      color: #9ca3af;
+      font-style: italic;
+    }
     
     .status-bar {
       display: flex;
@@ -288,6 +310,13 @@
     </div>
     
     <div class="note-container hidden" id="noteContainer">
+      <div class="note-label">Title</div>
+      <input
+        id="noteTitle"
+        class="note-title-input"
+        type="text"
+        placeholder="Page title"
+      />
       <div class="note-label">Your note for this page:</div>
       <textarea 
         id="noteTextarea" 
