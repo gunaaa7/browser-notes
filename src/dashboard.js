@@ -8,6 +8,15 @@
   const emptyState = document.getElementById('emptyState');
   const noteCount = document.getElementById('noteCount');
   const exportBtn = document.getElementById('exportBtn');
+  const editModal = document.getElementById('editModal');
+  const editTitle = document.getElementById('editTitle');
+  const editContent = document.getElementById('editContent');
+  const editUrl = document.getElementById('editUrl');
+  const cancelEdit = document.getElementById('cancelEdit');
+  const saveEdit = document.getElementById('saveEdit');
+
+  let notesById = new Map();
+  let activeEditId = null;
   
   async function loadNotes() {
     try {
@@ -32,6 +41,7 @@
   
   function renderNotes(notes) {
     notesList.innerHTML = '';
+    notesById = new Map(notes.map((note) => [note.id, note]));
     noteCount.textContent = `${notes.length} note${notes.length === 1 ? '' : 's'}`;
     
     if (notes.length === 0) {
@@ -62,7 +72,23 @@
       const content = document.createElement('div');
       content.className = 'note-content';
       content.textContent = note.content || '';
-      
+
+      const actions = document.createElement('div');
+      actions.className = 'note-actions';
+
+      const editButton = document.createElement('button');
+      editButton.className = 'btn small edit-note';
+      editButton.dataset.noteId = note.id;
+      editButton.textContent = 'Edit';
+
+      const deleteButton = document.createElement('button');
+      deleteButton.className = 'btn small danger delete-note';
+      deleteButton.dataset.noteId = note.id;
+      deleteButton.textContent = 'Delete';
+
+      actions.appendChild(editButton);
+      actions.appendChild(deleteButton);
+
       card.appendChild(header);
       
       const link = getNoteLink(note);
@@ -77,6 +103,7 @@
       }
       
       card.appendChild(content);
+      card.appendChild(actions);
       notesList.appendChild(card);
     });
   }
@@ -150,8 +177,99 @@
       alert('Failed to export notes. Please try again.');
     }
   }
-  
+
+  function openEditModal(noteId) {
+    const note = notesById.get(noteId);
+    if (!note) return;
+
+    activeEditId = noteId;
+    editTitle.value = note.title || '';
+    editContent.value = note.content || '';
+
+    const link = getNoteLink(note);
+    editUrl.textContent = link ? `URL: ${link}` : `ID: ${note.id}`;
+
+    editModal.classList.remove('hidden');
+    editTitle.focus();
+  }
+
+  function closeEditModal() {
+    activeEditId = null;
+    editModal.classList.add('hidden');
+  }
+
+  async function saveEditNote() {
+    if (!activeEditId) return;
+
+    try {
+      const existing = await chrome.storage.local.get([activeEditId]);
+      const note = existing[activeEditId];
+      if (!note) {
+        closeEditModal();
+        await loadNotes();
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const nextNote = {
+        ...note,
+        title: editTitle.value.trim() || note.title || note.id,
+        content: editContent.value,
+        updated: now
+      };
+
+      await chrome.storage.local.set({ [activeEditId]: nextNote });
+      closeEditModal();
+      await loadNotes();
+    } catch (error) {
+      console.error('Error saving note:', error);
+      alert('Failed to save note. Please try again.');
+    }
+  }
+
+  async function deleteNote(noteId) {
+    const note = notesById.get(noteId);
+    if (!noteId || !note) return;
+
+    const confirmed = confirm('Delete this note? This action cannot be undone.');
+    if (!confirmed) return;
+
+    try {
+      await chrome.storage.local.remove([noteId]);
+      if (activeEditId === noteId) {
+        closeEditModal();
+      }
+      await loadNotes();
+    } catch (error) {
+      console.error('Error deleting note:', error);
+      alert('Failed to delete note. Please try again.');
+    }
+  }
+
+  notesList.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    if (target.classList.contains('edit-note')) {
+      const noteId = target.dataset.noteId;
+      if (noteId) openEditModal(noteId);
+    }
+
+    if (target.classList.contains('delete-note')) {
+      const noteId = target.dataset.noteId;
+      if (noteId) deleteNote(noteId);
+    }
+  });
+
+  editModal.addEventListener('click', (event) => {
+    if (event.target === editModal) {
+      closeEditModal();
+    }
+  });
+
   exportBtn.addEventListener('click', exportNotes);
+  cancelEdit.addEventListener('click', closeEditModal);
+  saveEdit.addEventListener('click', saveEditNote);
   
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', loadNotes);

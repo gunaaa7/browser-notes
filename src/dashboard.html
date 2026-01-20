@@ -120,6 +120,29 @@
       padding-top: 10px;
     }
     
+    .note-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 4px;
+    }
+    
+    .btn.small {
+      padding: 6px 10px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+    
+    .btn.danger {
+      color: #b91c1c;
+      border-color: #fecaca;
+    }
+    
+    .btn.danger:hover {
+      background-color: #fef2f2;
+      border-color: #fca5a5;
+    }
+    
     .note-link {
       font-size: 12px;
       color: #2563eb;
@@ -141,6 +164,68 @@
     
     .hidden {
       display: none;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 50;
+    }
+
+    .modal-backdrop.hidden {
+      display: none;
+    }
+
+    .modal {
+      width: min(700px, 100%);
+      background: #ffffff;
+      border-radius: 14px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .modal h2 {
+      font-size: 16px;
+      color: #0f172a;
+    }
+
+    .modal label {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .modal input,
+    .modal textarea {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .modal textarea {
+      min-height: 160px;
+      resize: vertical;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 4px;
     }
   </style>
 </head>
@@ -165,6 +250,25 @@
     </div>
     
     <div id="notesList" class="notes-grid"></div>
+  </div>
+
+  <div id="editModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h2>Edit note</h2>
+      <div>
+        <label for="editTitle">Title</label>
+        <input id="editTitle" type="text" />
+      </div>
+      <div>
+        <label for="editContent">Note</label>
+        <textarea id="editContent"></textarea>
+      </div>
+      <div id="editUrl" class="note-meta"></div>
+      <div class="modal-actions">
+        <button class="btn small" id="cancelEdit">Cancel</button>
+        <button class="btn small" id="saveEdit">Save</button>
+      </div>
+    </div>
   </div>
   
   <script src="dashboard.js"></script>

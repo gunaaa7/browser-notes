@@ -17,6 +17,7 @@
   const viewAllBtn = document.getElementById('viewAllBtn');
   const clearBtn = document.getElementById('clearBtn');
   const closeBtn = document.getElementById('closeBtn');
+  const shortcutsLink = document.getElementById('shortcutsLink');
   
   // State
   let currentUrl = '';
@@ -279,10 +280,34 @@
       alert('Failed to open dashboard. Please try again.');
     }
   }
+
+  function getShortcutsUrl() {
+    const ua = navigator.userAgent;
+    if (ua.includes('Edg/')) return 'edge://extensions/shortcuts';
+    if (ua.includes('Brave')) return 'brave://extensions/shortcuts';
+    if (ua.includes('OPR/')) return 'opera://extensions/shortcuts';
+    return 'chrome://extensions/shortcuts';
+  }
+
+  async function openShortcutsPage(event) {
+    if (event) event.preventDefault();
+    const url = getShortcutsUrl();
+    try {
+      await chrome.tabs.create({ url });
+    } catch (error) {
+      console.error('Error opening shortcuts page:', error);
+      alert('Could not open the shortcuts page in this browser.');
+    }
+  }
   
   // Close side panel
   async function closeSidePanel() {
     try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && tab.id) {
+        chrome.runtime.sendMessage({ action: 'closePanel', tabId: tab.id }).catch(() => {});
+      }
+      
       // Save any pending changes first
       if (isDirty && saveTimer) {
         clearTimeout(saveTimer);
@@ -406,87 +431,20 @@
     
     // Close button
     closeBtn.addEventListener('click', closeSidePanel);
+
+    // Shortcuts link
+    shortcutsLink.addEventListener('click', openShortcutsPage);
     
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
-      // Alt+N to force save the current note
-      if (e.altKey && (e.key === 'n' || e.key === 'N')) {
+      // Alt+S to close side panel
+      if (e.altKey && (e.key === 's' || e.key === 'S')) {
         e.preventDefault();
         e.stopPropagation();
-        console.log('Alt+N pressed in side panel - forcing save');
-        
-        // Force immediate save
-        if (saveTimer) {
-          clearTimeout(saveTimer);
-          saveTimer = null;
-        }
-        
-        const content = noteTextarea.value.trim();
-        if (content || currentNote) {
-          setSaveStatus('saving', 'Saving...');
-          chrome.runtime.sendMessage({
-            action: 'saveNote',
-            url: currentUrl,
-            noteData: {
-              content: content,
-              title: (noteTitle.value || '').trim() || currentPageTitle || extractTitle(currentUrl)
-            }
-          }).then(response => {
-            if (response.success) {
-              currentNote = response.note;
-              updateNoteMeta(currentNote);
-              setSaveStatus('saved', 'Saved!');
-              isDirty = false;
-              
-              // Show brief success message
-              const notification = document.createElement('div');
-              notification.innerHTML = `
-                <div style="
-                  position: fixed;
-                  top: 20px;
-                  left: 50%;
-                  transform: translateX(-50%);
-                  background: #10b981;
-                  color: white;
-                  padding: 8px 16px;
-                  border-radius: 6px;
-                  font-size: 12px;
-                  font-weight: 500;
-                  z-index: 1000;
-                  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                ">
-                  ✓ Note saved!
-                </div>
-              `;
-              
-              document.body.appendChild(notification);
-              setTimeout(() => {
-                if (notification.parentNode) {
-                  notification.parentNode.removeChild(notification);
-                }
-              }, 1500);
-              
-              // Clear saved status after 2 seconds
-              setTimeout(() => {
-                if (saveStatusText.textContent === 'Saved!') {
-                  setSaveStatus('ready', 'Ready');
-                }
-              }, 2000);
-            }
-          }).catch(error => {
-            console.error('Error saving note:', error);
-            setSaveStatus('error', 'Save failed');
-          });
-        } else {
-          // Nothing to save
-          setSaveStatus('ready', 'Nothing to save');
-          setTimeout(() => {
-            setSaveStatus('ready', 'Ready');
-          }, 1500);
-        }
+        closeSidePanel();
         return;
       }
-      
+
       // Ctrl/Cmd + S to save immediately
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
@@ -497,7 +455,7 @@
         autoSave();
       }
     });
-    
+
     // Handle window unload
     window.addEventListener('beforeunload', () => {
       if (isDirty && saveTimer) {
@@ -512,6 +470,12 @@
           }
         });
       }
+
+      chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
+        if (tab && tab.id) {
+          chrome.runtime.sendMessage({ action: 'panelClosed', tabId: tab.id });
+        }
+      }).catch(() => {});
     });
     
     // Listen for tab activation changes

@@ -1,6 +1,8 @@
 // Service Worker for sideNote Chrome Extension
 // Handles storage, badge updates, URL canonicalization, and side panel management
 
+const sidePanelState = new Map();
+
 // URL Canonicalization Logic
 function canonicalizeUrl(url) {
   try {
@@ -178,10 +180,54 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   }
 });
 
+// Handle keyboard command to toggle side panel
+chrome.commands.onCommand.addListener((command) => {
+  if (command !== 'toggle-sidepanel') return;
+  
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const tab = tabs && tabs[0];
+    if (tab && tab.id) {
+      toggleSidePanel(tab.id);
+    }
+  });
+});
+
 // Handle toolbar button click
-chrome.action.onClicked.addListener(async (tab) => {
+chrome.action.onClicked.addListener((tab) => {
   try {
-    await chrome.sidePanel.open({ tabId: tab.id });
+    if (!tab || !tab.id) {
+      return;
+    }
+    
+    const isOpen = sidePanelState.get(tab.id) === true;
+    
+    if (isOpen) {
+      chrome.sidePanel.setOptions({ tabId: tab.id, enabled: false }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('Error disabling side panel:', chrome.runtime.lastError.message);
+          return;
+        }
+        sidePanelState.set(tab.id, false);
+      });
+      return;
+    }
+    
+    chrome.sidePanel.setOptions(
+      { tabId: tab.id, enabled: true, path: 'sidepanel.html' },
+      () => {
+        if (chrome.runtime.lastError) {
+          console.error('Error enabling side panel:', chrome.runtime.lastError.message);
+          return;
+        }
+        chrome.sidePanel.open({ tabId: tab.id }, () => {
+          if (chrome.runtime.lastError) {
+            console.error('Error opening side panel:', chrome.runtime.lastError.message);
+            return;
+          }
+          sidePanelState.set(tab.id, true);
+        });
+      }
+    );
   } catch (error) {
     console.error('Error opening side panel:', error);
   }
@@ -189,10 +235,46 @@ chrome.action.onClicked.addListener(async (tab) => {
 
 // Handle side panel toggle requests
 async function toggleSidePanel(tabId) {
+  if (!tabId) return;
+  
   try {
-    await chrome.sidePanel.open({ tabId: tabId });
+    chrome.tabs.get(tabId, (tab) => {
+      if (!tab) {
+        return;
+      }
+      
+      const isOpen = sidePanelState.get(tabId) === true;
+      
+      if (isOpen) {
+        chrome.sidePanel.setOptions({ tabId, enabled: false }, () => {
+          if (chrome.runtime.lastError) {
+            console.error('Error disabling side panel:', chrome.runtime.lastError.message);
+            return;
+          }
+          sidePanelState.set(tabId, false);
+        });
+        return;
+      }
+      
+      chrome.sidePanel.setOptions(
+        { tabId, enabled: true, path: 'sidepanel.html' },
+        () => {
+          if (chrome.runtime.lastError) {
+            console.error('Error enabling side panel:', chrome.runtime.lastError.message);
+            return;
+          }
+          chrome.sidePanel.open({ tabId }, () => {
+            if (chrome.runtime.lastError) {
+              console.error('Error opening side panel:', chrome.runtime.lastError.message);
+              return;
+            }
+            sidePanelState.set(tabId, true);
+          });
+        }
+      );
+    });
   } catch (error) {
-    console.error('Error opening side panel:', error);
+    console.error('Error toggling side panel:', error);
   }
 }
 
@@ -251,8 +333,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           
         case 'togglePanel':
           // Handle keyboard shortcut from content script
-          await toggleSidePanel(sender.tab.id);
+          await toggleSidePanel(request.tabId || sender.tab?.id);
           sendResponse({ success: true });
+          break;
+          
+        case 'panelClosed':
+          if (request.tabId) {
+            sidePanelState.set(request.tabId, false);
+          }
+          sendResponse({ success: true });
+          break;
+          
+        case 'closePanel':
+          if (request.tabId) {
+            chrome.sidePanel.setOptions({ tabId: request.tabId, enabled: false }, () => {
+              if (chrome.runtime.lastError) {
+                console.error('Error disabling side panel:', chrome.runtime.lastError.message);
+              }
+              sidePanelState.set(request.tabId, false);
+              sendResponse({ success: true });
+            });
+            return;
+          }
+          sendResponse({ success: false, error: 'Missing tabId' });
           break;
           
         default:

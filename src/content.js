@@ -111,76 +111,13 @@
   
   // Initialize with a small delay to ensure everything is ready
   setTimeout(() => {
-    console.log('sideNote: Initializing keyboard shortcuts...');
-    
-    // Test extension context on initialization
     if (isExtensionContextValid()) {
-      console.log('sideNote: Extension context is valid, Alt+N shortcut is ready');
-      
       // Initial URL notification
       notifyUrlChange();
     } else {
       console.log('sideNote: Extension context is invalid, please reload the page');
     }
   }, 100);
-  
-  // Listen for keyboard shortcuts globally
-  document.addEventListener('keydown', (e) => {
-    // Alt+N to toggle side panel (both 'n' and 'N' for better compatibility)
-    if (e.altKey && (e.key === 'n' || e.key === 'N')) {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      console.log('Alt+N pressed - attempting to toggle side panel');
-      
-      // Check if extension context is still valid
-      if (!isExtensionContextValid()) {
-        console.log('Extension context invalidated, please reload the page');
-        // Show a brief notification to the user
-        const notification = document.createElement('div');
-        notification.textContent = 'sideNote: Please refresh the page to use Alt+N';
-        notification.style.cssText = `
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          background: #333;
-          color: white;
-          padding: 10px 15px;
-          border-radius: 5px;
-          z-index: 10000;
-          font-size: 14px;
-          font-family: Arial, sans-serif;
-        `;
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 3000);
-        return;
-      }
-      
-      // Send message to background script to toggle side panel
-      chrome.runtime.sendMessage({
-        action: 'togglePanel'
-      }).then(response => {
-        console.log('Side panel toggle response:', response);
-        if (response.success) {
-          console.log('sideNote: Side panel opened! Use Alt+N in the panel to close it.');
-        }
-      }).catch(error => {
-        console.error('Error sending toggle panel message:', error);
-        if (error.message.includes('Extension context invalidated')) {
-          console.log('Extension was reloaded, please refresh the page to use Alt+N shortcut');
-        }
-      });
-    }
-  }, true); // Use capture phase for better event handling
-  
-  // Listen for messages from background script
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'togglePanel') {
-      // Handle toggle panel message from background script
-      // This helps with keyboard shortcut handling
-      sendResponse({ success: true });
-    }
-  });
   
   console.log('sideNote content script loaded');
 })(); 
