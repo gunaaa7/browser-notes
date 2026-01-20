@@ -49,6 +49,28 @@
       gap: 10px;
       align-items: center;
     }
+
+    .search-input {
+      width: 260px;
+      max-width: 42vw;
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      background-color: #ffffff;
+      font-size: 13px;
+      color: #111827;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .search-input::placeholder {
+      color: #9ca3af;
+    }
+
+    .search-input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+    }
     
     .btn {
       padding: 8px 14px;
@@ -90,6 +112,7 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
+      height: 300px;
     }
     
     .note-header {
@@ -102,6 +125,12 @@
       font-size: 14px;
       font-weight: 600;
       color: #111827;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      line-height: 1.3;
+      height: 2.6em;
+      overflow: hidden;
       word-break: break-word;
     }
     
@@ -117,7 +146,21 @@
       white-space: pre-wrap;
       word-break: break-word;
       border-top: 1px solid #f1f5f9;
-      padding-top: 10px;
+      padding-top: 8px;
+      display: -webkit-box;
+      -webkit-line-clamp: 5;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 96px;
+    }
+
+    .note-content-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 2px;
     }
     
     .note-actions {
@@ -125,6 +168,7 @@
       gap: 8px;
       align-items: center;
       margin-top: 4px;
+      margin-top: auto;
     }
     
     .btn.small {
@@ -147,6 +191,12 @@
       font-size: 12px;
       color: #2563eb;
       text-decoration: none;
+      display: block;
+      line-height: 1.3;
+      height: 1.3em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     
     .note-link:hover {
@@ -160,6 +210,12 @@
       border: 1px dashed #d1d5db;
       border-radius: 14px;
       background-color: rgba(255, 255, 255, 0.8);
+    }
+
+    .footer-actions {
+      margin-top: 20px;
+      display: flex;
+      justify-content: flex-end;
     }
     
     .hidden {
@@ -227,6 +283,20 @@
       gap: 8px;
       margin-top: 4px;
     }
+
+    .view-content {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 12px;
+      background: #f8fafc;
+      color: #111827;
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 50vh;
+      overflow: auto;
+    }
   </style>
 </head>
 <body>
@@ -237,7 +307,13 @@
         <p>All your notes across the web, in one place.</p>
       </div>
       <div class="header-actions">
-        <button class="btn" id="exportBtn">Export notes</button>
+        <input
+          id="searchInput"
+          class="search-input"
+          type="search"
+          placeholder="Search notes, titles, or URLs..."
+          aria-label="Search notes"
+        />
       </div>
     </div>
     
@@ -250,6 +326,10 @@
     </div>
     
     <div id="notesList" class="notes-grid"></div>
+
+    <div class="footer-actions">
+      <button class="btn" id="exportBtn">Export all notes</button>
+    </div>
   </div>
 
   <div id="editModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
@@ -267,6 +347,17 @@
       <div class="modal-actions">
         <button class="btn small" id="cancelEdit">Cancel</button>
         <button class="btn small" id="saveEdit">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="viewModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h2 id="viewTitle">View note</h2>
+      <div id="viewUrl" class="note-meta"></div>
+      <div id="viewContent" class="view-content"></div>
+      <div class="modal-actions">
+        <button class="btn small" id="closeView">Close</button>
       </div>
     </div>
   </div>

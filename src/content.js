@@ -90,7 +90,7 @@
       if (style.parentNode) {
         style.remove();
       }
-    }, 10000);
+    }, 2800);
   }
   
   // Debounced function to notify service worker of URL change

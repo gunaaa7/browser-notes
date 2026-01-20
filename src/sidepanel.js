@@ -362,7 +362,7 @@
           if (notification.parentNode) {
             notification.parentNode.removeChild(notification);
           }
-        }, 4000);
+        }, 2800);
       }
       
     } catch (error) {

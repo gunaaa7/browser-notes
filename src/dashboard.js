@@ -8,15 +8,22 @@
   const emptyState = document.getElementById('emptyState');
   const noteCount = document.getElementById('noteCount');
   const exportBtn = document.getElementById('exportBtn');
+  const searchInput = document.getElementById('searchInput');
   const editModal = document.getElementById('editModal');
   const editTitle = document.getElementById('editTitle');
   const editContent = document.getElementById('editContent');
   const editUrl = document.getElementById('editUrl');
   const cancelEdit = document.getElementById('cancelEdit');
   const saveEdit = document.getElementById('saveEdit');
+  const viewModal = document.getElementById('viewModal');
+  const viewTitle = document.getElementById('viewTitle');
+  const viewContent = document.getElementById('viewContent');
+  const viewUrl = document.getElementById('viewUrl');
+  const closeView = document.getElementById('closeView');
 
   let notesById = new Map();
   let activeEditId = null;
+  let allNotes = [];
   
   async function loadNotes() {
     try {
@@ -31,7 +38,8 @@
         return bTime - aTime;
       });
       
-      renderNotes(notes);
+      allNotes = notes;
+      applyFilter();
     } catch (error) {
       console.error('Error loading notes:', error);
       emptyState.textContent = 'Failed to load notes. Please try again.';
@@ -39,12 +47,19 @@
     }
   }
   
-  function renderNotes(notes) {
+  function renderNotes(notes, totalCount, query) {
     notesList.innerHTML = '';
     notesById = new Map(notes.map((note) => [note.id, note]));
-    noteCount.textContent = `${notes.length} note${notes.length === 1 ? '' : 's'}`;
+    const countLabel = `${notes.length} note${notes.length === 1 ? '' : 's'}`;
+    noteCount.textContent = totalCount !== null && totalCount !== undefined && totalCount !== notes.length
+      ? `${countLabel} (of ${totalCount})`
+      : countLabel;
     
     if (notes.length === 0) {
+      const hasQuery = Boolean(query && query.trim());
+      emptyState.textContent = hasQuery
+        ? `No results for "${query.trim()}".`
+        : 'No notes yet. Add a note from the side panel to see it here.';
       emptyState.classList.remove('hidden');
       return;
     }
@@ -73,8 +88,17 @@
       content.className = 'note-content';
       content.textContent = note.content || '';
 
+      const contentLabel = document.createElement('div');
+      contentLabel.className = 'note-content-label';
+      contentLabel.textContent = 'Note';
+
       const actions = document.createElement('div');
       actions.className = 'note-actions';
+
+      const viewButton = document.createElement('button');
+      viewButton.className = 'btn small view-note';
+      viewButton.dataset.noteId = note.id;
+      viewButton.textContent = 'View';
 
       const editButton = document.createElement('button');
       editButton.className = 'btn small edit-note';
@@ -86,6 +110,7 @@
       deleteButton.dataset.noteId = note.id;
       deleteButton.textContent = 'Delete';
 
+      actions.appendChild(viewButton);
       actions.appendChild(editButton);
       actions.appendChild(deleteButton);
 
@@ -99,13 +124,41 @@
         linkEl.target = '_blank';
         linkEl.rel = 'noreferrer';
         linkEl.textContent = link;
+        linkEl.title = link;
         card.appendChild(linkEl);
       }
       
+      card.appendChild(contentLabel);
       card.appendChild(content);
       card.appendChild(actions);
       notesList.appendChild(card);
     });
+  }
+
+  function applyFilter() {
+    const query = searchInput ? searchInput.value.trim() : '';
+    if (!query) {
+      renderNotes(allNotes, allNotes.length, '');
+      return;
+    }
+
+    const needle = query.toLowerCase();
+    const filtered = allNotes.filter((note) => {
+      const title = (note.title || '').toLowerCase();
+      const content = (note.content || '').toLowerCase();
+      const id = (note.id || '').toLowerCase();
+      const aliases = Array.isArray(note.aliases)
+        ? note.aliases.join(' ').toLowerCase()
+        : '';
+      return (
+        title.includes(needle) ||
+        content.includes(needle) ||
+        id.includes(needle) ||
+        aliases.includes(needle)
+      );
+    });
+
+    renderNotes(filtered, allNotes.length, query);
   }
   
   function buildMetaText(note) {
@@ -198,6 +251,23 @@
     editModal.classList.add('hidden');
   }
 
+  function openViewModal(noteId) {
+    const note = notesById.get(noteId);
+    if (!note) return;
+
+    viewTitle.textContent = note.title || 'Untitled';
+    viewContent.textContent = note.content || '';
+
+    const link = getNoteLink(note);
+    viewUrl.textContent = link ? `URL: ${link}` : `ID: ${note.id}`;
+
+    viewModal.classList.remove('hidden');
+  }
+
+  function closeViewModal() {
+    viewModal.classList.add('hidden');
+  }
+
   async function saveEditNote() {
     if (!activeEditId) return;
 
@@ -250,6 +320,11 @@
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
 
+    if (target.classList.contains('view-note')) {
+      const noteId = target.dataset.noteId;
+      if (noteId) openViewModal(noteId);
+    }
+
     if (target.classList.contains('edit-note')) {
       const noteId = target.dataset.noteId;
       if (noteId) openEditModal(noteId);
@@ -267,9 +342,19 @@
     }
   });
 
+  viewModal.addEventListener('click', (event) => {
+    if (event.target === viewModal) {
+      closeViewModal();
+    }
+  });
+
   exportBtn.addEventListener('click', exportNotes);
   cancelEdit.addEventListener('click', closeEditModal);
   saveEdit.addEventListener('click', saveEditNote);
+  closeView.addEventListener('click', closeViewModal);
+  if (searchInput) {
+    searchInput.addEventListener('input', applyFilter);
+  }
   
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', loadNotes);
