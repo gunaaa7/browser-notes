@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "sideNote",
+  "name": "PageNote",
   "version": "1.0.0",
   "description": "Friction-free note-taking directly inside any web page. Your notes resurface automatically on every visit.",
   
@@ -28,14 +28,10 @@
     }
   ],
   
-  "side_panel": {
-    "default_path": "sidepanel.html"
-  },
-
   "options_page": "dashboard.html",
   
   "action": {
-    "default_title": "sideNote - Quick notes for this page"
+    "default_title": "PageNote - Quick notes for this page"
   },
 
   "icons": {

@@ -1,4 +1,4 @@
-// Content Script for sideNote Chrome Extension
+// Content Script for PageNote Chrome Extension
 // Handles SPA route change detection and communicates with service worker
 
 (function() {
@@ -7,6 +7,91 @@
   let currentUrl = window.location.href;
   let debounceTimer = null;
   const DEBOUNCE_DELAY = 300; // 300ms debounce for route changes
+  let lastToastUrl = '';
+  let lastToastAt = 0;
+
+  function showNoteToast(message, url) {
+    const now = Date.now();
+    if (url && url === lastToastUrl && now - lastToastAt < 30000) {
+      return;
+    }
+
+    const existing = document.getElementById('pagenote-toast');
+    if (existing) {
+      existing.remove();
+    }
+
+    lastToastUrl = url || window.location.href;
+    lastToastAt = now;
+
+    const toast = document.createElement('div');
+    toast.id = 'pagenote-toast';
+    toast.innerHTML = `
+      <div class="pagenote-toast-body">
+        <div class="pagenote-toast-text">${message}</div>
+        <div class="pagenote-toast-actions">
+          <button type="button" class="pagenote-toast-dismiss" aria-label="Dismiss">×</button>
+        </div>
+      </div>
+    `;
+
+    const style = document.createElement('style');
+    style.textContent = `
+      #pagenote-toast {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        z-index: 2147483647;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+        color: #111827;
+      }
+      #pagenote-toast .pagenote-toast-body {
+        background: #fff7ed;
+        border: 1px solid #fdba74;
+        box-shadow: 0 10px 24px rgba(0,0,0,0.15);
+        border-radius: 12px;
+        padding: 12px 12px 10px 12px;
+        width: 280px;
+      }
+      #pagenote-toast .pagenote-toast-text {
+        font-size: 13px;
+        line-height: 1.35;
+        margin-bottom: 10px;
+      }
+      #pagenote-toast .pagenote-toast-actions {
+        display: flex;
+        justify-content: flex-end;
+      }
+      #pagenote-toast .pagenote-toast-dismiss {
+        background: transparent;
+        border: none;
+        font-size: 16px;
+        line-height: 1;
+        color: #9a3412;
+        cursor: pointer;
+      }
+      #pagenote-toast .pagenote-toast-dismiss:hover {
+        color: #7c2d12;
+      }
+    `;
+
+    toast.querySelector('.pagenote-toast-dismiss').addEventListener('click', () => {
+      toast.remove();
+      style.remove();
+    });
+
+    document.documentElement.appendChild(style);
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.remove();
+      }
+      if (style.parentNode) {
+        style.remove();
+      }
+    }, 10000);
+  }
   
   // Debounced function to notify service worker of URL change
   function notifyUrlChange() {
@@ -115,9 +200,15 @@
       // Initial URL notification
       notifyUrlChange();
     } else {
-      console.log('sideNote: Extension context is invalid, please reload the page');
+      console.log('PageNote: Extension context is invalid, please reload the page');
     }
   }, 100);
   
-  console.log('sideNote content script loaded');
+  console.log('PageNote content script loaded');
+
+  chrome.runtime.onMessage.addListener((request) => {
+    if (request && request.action === 'showNoteToast') {
+      showNoteToast(request.text || 'You have a saved note for this page. Check it in the side panel.', request.url);
+    }
+  });
 })(); 

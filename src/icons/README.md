@@ -1,4 +1,4 @@
-# sideNote Extension Icons
+# PageNote Extension Icons
 
 This directory should contain the following icon files:
 

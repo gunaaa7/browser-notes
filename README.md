@@ -1,4 +1,4 @@
-# SideNote
+# PageNote
 
 A comprehensive note-taking application with AI integration, voice recording capabilities, and browser extension functionality.
 

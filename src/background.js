@@ -1,7 +1,32 @@
-// Service Worker for sideNote Chrome Extension
+// Service Worker for PageNote Chrome Extension
 // Handles storage, badge updates, URL canonicalization, and side panel management
 
 const sidePanelState = new Map();
+
+function disableSidePanelForTab(tabId, context) {
+  if (!tabId) return;
+  chrome.sidePanel.setOptions({ tabId, enabled: false }, () => {
+    if (chrome.runtime.lastError) {
+      console.error(`Error disabling side panel ${context}:`, chrome.runtime.lastError.message);
+    }
+  });
+}
+
+const DEFAULT_ICON_PATHS = {
+  16: 'icons/icon16.png',
+  32: 'icons/icon32.png',
+  48: 'icons/icon48.png',
+  64: 'icons/icon64.png',
+  128: 'icons/icon128.png'
+};
+
+const NOTE_ICON_PATHS = {
+  16: 'icons/icon16-dot.png',
+  32: 'icons/icon32-dot.png',
+  48: 'icons/icon48-dot.png',
+  64: 'icons/icon64-dot.png',
+  128: 'icons/icon128-dot.png'
+};
 
 // URL Canonicalization Logic
 function canonicalizeUrl(url) {
@@ -110,11 +135,54 @@ async function updateBadge(tabId, url) {
   const note = await getNote(canonicalUrl);
   
   if (note && note.content.trim()) {
-    await chrome.action.setBadgeText({ tabId, text: '•' });
-    await chrome.action.setBadgeBackgroundColor({ tabId, color: '#4CAF50' });
+    await chrome.action.setBadgeText({ tabId, text: '' });
+    await chrome.action.setBadgeBackgroundColor({ tabId, color: 'rgba(0, 0, 0, 0)' });
+    await chrome.action.setIcon({ tabId, path: NOTE_ICON_PATHS });
   } else {
     await chrome.action.setBadgeText({ tabId, text: '' });
+    await chrome.action.setBadgeBackgroundColor({ tabId, color: 'rgba(0, 0, 0, 0)' });
+    await chrome.action.setIcon({ tabId, path: DEFAULT_ICON_PATHS });
   }
+}
+
+async function syncSidePanelForTab(tabId, url, isActive) {
+  if (!tabId || !url) return;
+
+  const canonicalUrl = canonicalizeUrl(url);
+  const note = await getNote(canonicalUrl);
+  const hasNote = note && note.content && note.content.trim();
+
+  if (hasNote) {
+    const isOpen = sidePanelState.get(tabId) === true;
+    chrome.sidePanel.setOptions(
+      { tabId, enabled: true, path: 'sidepanel.html' },
+      () => {
+        if (chrome.runtime.lastError) {
+          console.error('Error enabling side panel for note:', chrome.runtime.lastError.message);
+          return;
+        }
+        if (isActive && !isOpen) {
+          chrome.tabs.sendMessage(
+            tabId,
+            {
+              action: 'showNoteToast',
+              url,
+              text: 'You have a saved note for this page. Check it in the side panel.'
+            },
+            () => {
+              if (chrome.runtime.lastError) {
+                console.warn('Toast message failed:', chrome.runtime.lastError.message);
+              }
+            }
+          );
+        }
+      }
+    );
+    return;
+  }
+
+  disableSidePanelForTab(tabId, 'no note for tab');
+  sidePanelState.set(tabId, false);
 }
 
 // Storage Quota Check
@@ -158,7 +226,26 @@ async function exportNotes() {
 
 // Event Listeners
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('sideNote extension installed');
+  console.log('PageNote extension installed');
+  chrome.tabs.query({}, (tabs) => {
+    if (!tabs || !tabs.length) return;
+    tabs.forEach((tab) => {
+      if (!tab.id) return;
+      disableSidePanelForTab(tab.id, 'on install');
+      sidePanelState.set(tab.id, false);
+    });
+  });
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  chrome.tabs.query({}, (tabs) => {
+    if (!tabs || !tabs.length) return;
+    tabs.forEach((tab) => {
+      if (!tab.id) return;
+      disableSidePanelForTab(tab.id, 'on startup');
+      sidePanelState.set(tab.id, false);
+    });
+  });
 });
 
 // Handle tab activation
@@ -168,15 +255,29 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
     if (tab.url) {
       await updateBadge(activeInfo.tabId, tab.url);
     }
+    await syncSidePanelForTab(activeInfo.tabId, tab.url, true);
   } catch (error) {
     console.error('Error handling tab activation:', error);
   }
+});
+
+// Ensure new tabs start with the side panel closed
+chrome.tabs.onCreated.addListener((tab) => {
+  if (!tab || !tab.id) return;
+  disableSidePanelForTab(tab.id, 'on tab create');
+  sidePanelState.set(tab.id, false);
+});
+
+// Clean up state when a tab is closed
+chrome.tabs.onRemoved.addListener((tabId) => {
+  sidePanelState.delete(tabId);
 });
 
 // Handle tab updates
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url) {
     await updateBadge(tabId, tab.url);
+    await syncSidePanelForTab(tabId, tab.url, tab.active);
   }
 });
 
@@ -202,13 +303,8 @@ chrome.action.onClicked.addListener((tab) => {
     const isOpen = sidePanelState.get(tab.id) === true;
     
     if (isOpen) {
-      chrome.sidePanel.setOptions({ tabId: tab.id, enabled: false }, () => {
-        if (chrome.runtime.lastError) {
-          console.error('Error disabling side panel:', chrome.runtime.lastError.message);
-          return;
-        }
-        sidePanelState.set(tab.id, false);
-      });
+      disableSidePanelForTab(tab.id, 'from action click');
+      sidePanelState.set(tab.id, false);
       return;
     }
     
@@ -246,13 +342,8 @@ async function toggleSidePanel(tabId) {
       const isOpen = sidePanelState.get(tabId) === true;
       
       if (isOpen) {
-        chrome.sidePanel.setOptions({ tabId, enabled: false }, () => {
-          if (chrome.runtime.lastError) {
-            console.error('Error disabling side panel:', chrome.runtime.lastError.message);
-            return;
-          }
-          sidePanelState.set(tabId, false);
-        });
+        disableSidePanelForTab(tabId, 'from command');
+        sidePanelState.set(tabId, false);
         return;
       }
       
@@ -328,6 +419,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'urlChanged':
           // Handle SPA navigation
           await updateBadge(sender.tab.id, request.url);
+          await syncSidePanelForTab(sender.tab.id, request.url, sender.tab?.active);
           sendResponse({ success: true });
           break;
           
@@ -346,13 +438,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           
         case 'closePanel':
           if (request.tabId) {
-            chrome.sidePanel.setOptions({ tabId: request.tabId, enabled: false }, () => {
-              if (chrome.runtime.lastError) {
-                console.error('Error disabling side panel:', chrome.runtime.lastError.message);
-              }
-              sidePanelState.set(request.tabId, false);
-              sendResponse({ success: true });
-            });
+            disableSidePanelForTab(request.tabId, 'from closePanel');
+            sidePanelState.set(request.tabId, false);
+            sendResponse({ success: true });
             return;
           }
           sendResponse({ success: false, error: 'Missing tabId' });

@@ -1,4 +1,4 @@
-# sideNote - Chrome Extension
+# PageNote - Chrome Extension
 
 > Friction-free note-taking directly inside any web page. Your notes resurface automatically on every visit.
 
@@ -30,7 +30,7 @@
 
 ### Creating Notes
 
-1. **Open panel**: Press `Alt+N` or click the sideNote toolbar button
+1. **Open panel**: Press `Alt+N` or click the PageNote toolbar button
 2. **Start typing**: The panel opens with a text area ready for your notes
 3. **Auto-save**: Notes save automatically as you type (400ms debounce)
 4. **Close panel**: Click the **X** button in the top-right corner of the panel
@@ -52,7 +52,7 @@
 
 ### URL Canonicalization
 
-sideNote creates consistent URLs by:
+PageNote creates consistent URLs by:
 - Forcing HTTPS
 - Converting hostnames to lowercase
 - Removing tracking parameters (utm_*, fbclid, gclid)

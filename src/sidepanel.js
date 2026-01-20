@@ -1,4 +1,4 @@
-// Side Panel JavaScript for sideNote Chrome Extension
+// Side Panel JavaScript for PageNote Chrome Extension
 // Handles note loading, auto-save, storage management, and UI interactions
 
 (function() {
@@ -65,7 +65,7 @@
           saveTimer = null;
         }
         
-        // Update URL info display
+        // Update URL info display (if present)
         updateUrlInfo(currentUrl);
         
         // Show brief "switching" indicator
@@ -85,6 +85,9 @@
   
   // Update URL info display
   function updateUrlInfo(url) {
+    if (!urlInfo) {
+      return;
+    }
     try {
       const urlObj = new URL(url);
       const displayUrl = urlObj.hostname + urlObj.pathname;
@@ -519,5 +522,5 @@
     init();
   }
   
-  console.log('sideNote panel script loaded');
+  console.log('PageNote panel script loaded');
 })(); 
