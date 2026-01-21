@@ -31,6 +31,9 @@ const NOTE_ICON_PATHS = {
 // URL Canonicalization Logic
 function canonicalizeUrl(url) {
   try {
+    if (!url || typeof url !== 'string') {
+      return null;
+    }
     let canonicalUrl = new URL(url);
     
     // YouTube special handling
@@ -67,13 +70,16 @@ function canonicalizeUrl(url) {
     return canonicalUrl.toString();
   } catch (error) {
     console.error('Error canonicalizing URL:', error);
-    return url;
+    return null;
   }
 }
 
 // Storage Management
 async function getNote(canonicalUrl) {
   try {
+    if (!canonicalUrl || typeof canonicalUrl !== 'string') {
+      return null;
+    }
     const result = await chrome.storage.local.get([canonicalUrl]);
     return result[canonicalUrl] || null;
   } catch (error) {
@@ -84,6 +90,9 @@ async function getNote(canonicalUrl) {
 
 async function saveNote(canonicalUrl, originalUrl, noteData) {
   try {
+    if (!canonicalUrl || typeof canonicalUrl !== 'string') {
+      return null;
+    }
     const existingNote = await getNote(canonicalUrl);
     const now = new Date().toISOString();
     
@@ -111,6 +120,9 @@ async function saveNote(canonicalUrl, originalUrl, noteData) {
 
 async function deleteNote(canonicalUrl) {
   try {
+    if (!canonicalUrl || typeof canonicalUrl !== 'string') {
+      return;
+    }
     await chrome.storage.local.remove([canonicalUrl]);
   } catch (error) {
     console.error('Error deleting note:', error);
@@ -132,6 +144,7 @@ async function updateBadge(tabId, url) {
   if (!url) return;
   
   const canonicalUrl = canonicalizeUrl(url);
+  if (!canonicalUrl) return;
   const note = await getNote(canonicalUrl);
   
   if (note && note.content.trim()) {
@@ -146,43 +159,53 @@ async function updateBadge(tabId, url) {
 }
 
 async function syncSidePanelForTab(tabId, url, isActive) {
-  if (!tabId || !url) return;
+  if (!tabId) return;
+  if (!url) {
+    disableSidePanelForTab(tabId, 'missing url');
+    sidePanelState.set(tabId, false);
+    return;
+  }
 
   const canonicalUrl = canonicalizeUrl(url);
+  if (!canonicalUrl) {
+    disableSidePanelForTab(tabId, 'invalid url');
+    sidePanelState.set(tabId, false);
+    return;
+  }
   const note = await getNote(canonicalUrl);
   const hasNote = note && note.content && note.content.trim();
 
-  if (hasNote) {
-    const isOpen = sidePanelState.get(tabId) === true;
+  const isOpen = sidePanelState.get(tabId) === true;
+
+  if (isOpen) {
     chrome.sidePanel.setOptions(
       { tabId, enabled: true, path: 'sidepanel.html' },
       () => {
         if (chrome.runtime.lastError) {
-          console.error('Error enabling side panel for note:', chrome.runtime.lastError.message);
-          return;
-        }
-        if (isActive && !isOpen) {
-          chrome.tabs.sendMessage(
-            tabId,
-            {
-              action: 'showNoteToast',
-              url,
-              text: 'You have a saved note for this page. Check it in the side panel.'
-            },
-            () => {
-              if (chrome.runtime.lastError) {
-                console.warn('Toast message failed:', chrome.runtime.lastError.message);
-              }
-            }
-          );
+          console.error('Error enabling side panel:', chrome.runtime.lastError.message);
         }
       }
     );
-    return;
+  } else {
+    disableSidePanelForTab(tabId, 'panel closed for tab');
+    sidePanelState.set(tabId, false);
   }
 
-  disableSidePanelForTab(tabId, 'no note for tab');
-  sidePanelState.set(tabId, false);
+  if (hasNote && isActive && !isOpen) {
+    chrome.tabs.sendMessage(
+      tabId,
+      {
+        action: 'showNoteToast',
+        url,
+        text: 'You have a saved note for this page. Check it in the side panel.'
+      },
+      () => {
+        if (chrome.runtime.lastError) {
+          console.warn('Toast message failed:', chrome.runtime.lastError.message);
+        }
+      }
+    );
+  }
 }
 
 // Storage Quota Check
@@ -227,6 +250,16 @@ async function exportNotes() {
 // Event Listeners
 chrome.runtime.onInstalled.addListener(() => {
   console.log('PageNote extension installed');
+  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }, () => {
+    if (chrome.runtime.lastError) {
+      console.error('Error setting side panel behavior:', chrome.runtime.lastError.message);
+    }
+  });
+  chrome.sidePanel.setOptions({ enabled: false }, () => {
+    if (chrome.runtime.lastError) {
+      console.error('Error disabling global side panel:', chrome.runtime.lastError.message);
+    }
+  });
   chrome.tabs.query({}, (tabs) => {
     if (!tabs || !tabs.length) return;
     tabs.forEach((tab) => {
@@ -238,6 +271,16 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 chrome.runtime.onStartup.addListener(() => {
+  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }, () => {
+    if (chrome.runtime.lastError) {
+      console.error('Error setting side panel behavior:', chrome.runtime.lastError.message);
+    }
+  });
+  chrome.sidePanel.setOptions({ enabled: false }, () => {
+    if (chrome.runtime.lastError) {
+      console.error('Error disabling global side panel:', chrome.runtime.lastError.message);
+    }
+  });
   chrome.tabs.query({}, (tabs) => {
     if (!tabs || !tabs.length) return;
     tabs.forEach((tab) => {
@@ -250,15 +293,19 @@ chrome.runtime.onStartup.addListener(() => {
 
 // Handle tab activation
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
-  try {
-    const tab = await chrome.tabs.get(activeInfo.tabId);
-    if (tab.url) {
-      await updateBadge(activeInfo.tabId, tab.url);
+  chrome.tabs.get(activeInfo.tabId, (tab) => {
+    if (chrome.runtime.lastError) {
+      console.warn('Error getting active tab:', chrome.runtime.lastError.message);
     }
-    await syncSidePanelForTab(activeInfo.tabId, tab.url, true);
-  } catch (error) {
-    console.error('Error handling tab activation:', error);
-  }
+    if (tab && tab.url) {
+      updateBadge(activeInfo.tabId, tab.url).catch((error) => {
+        console.error('Error updating badge on activation:', error);
+      });
+    }
+    syncSidePanelForTab(activeInfo.tabId, tab && tab.url, true).catch((error) => {
+      console.error('Error syncing side panel on activation:', error);
+    });
+  });
 });
 
 // Ensure new tabs start with the side panel closed
@@ -275,8 +322,10 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 
 // Handle tab updates
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' && tab.url) {
-    await updateBadge(tabId, tab.url);
+  if (changeInfo.status === 'complete') {
+    if (tab.url) {
+      await updateBadge(tabId, tab.url);
+    }
     await syncSidePanelForTab(tabId, tab.url, tab.active);
   }
 });
@@ -420,6 +469,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           // Handle SPA navigation
           await updateBadge(sender.tab.id, request.url);
           await syncSidePanelForTab(sender.tab.id, request.url, sender.tab?.active);
+          sendResponse({ success: true });
+          break;
+
+        case 'tabActivated':
+          if (!sender.tab || !sender.tab.id) {
+            sendResponse({ success: false, error: 'Missing tab info' });
+            break;
+          }
+          if (request.url) {
+            await updateBadge(sender.tab.id, request.url);
+          }
+          await syncSidePanelForTab(sender.tab.id, request.url, true);
           sendResponse({ success: true });
           break;
           

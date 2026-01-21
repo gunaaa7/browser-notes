@@ -9,6 +9,8 @@
   const DEBOUNCE_DELAY = 300; // 300ms debounce for route changes
   let lastToastUrl = '';
   let lastToastAt = 0;
+  let lastActivePingAt = 0;
+  const ACTIVE_PING_COOLDOWN = 800;
 
   function showNoteToast(message, url) {
     const now = Date.now();
@@ -114,6 +116,18 @@
       }
     }, DEBOUNCE_DELAY);
   }
+
+  function notifyTabActive() {
+    const now = Date.now();
+    if (now - lastActivePingAt < ACTIVE_PING_COOLDOWN) {
+      return;
+    }
+    lastActivePingAt = now;
+    chrome.runtime.sendMessage({
+      action: 'tabActivated',
+      url: window.location.href
+    }).catch(() => {});
+  }
   
   // Listen for popstate events (back/forward button)
   window.addEventListener('popstate', notifyUrlChange);
@@ -177,6 +191,17 @@
   
   // Listen for hashchange events
   window.addEventListener('hashchange', notifyUrlChange);
+
+  // Notify when the tab becomes visible/active
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      notifyTabActive();
+    }
+  });
+
+  window.addEventListener('focus', () => {
+    notifyTabActive();
+  });
   
   // Check for URL changes periodically as a fallback
   setInterval(() => {
@@ -199,6 +224,7 @@
     if (isExtensionContextValid()) {
       // Initial URL notification
       notifyUrlChange();
+      notifyTabActive();
     } else {
       console.log('PageNote: Extension context is invalid, please reload the page');
     }
