@@ -1,60 +1,74 @@
 # PageNote
 
-A comprehensive note-taking application with AI integration, voice recording capabilities, and browser extension functionality.
+Friction-free notes attached to web pages. Your notes resurface automatically when you revisit a page.
+
+---
+
+## Demo
+
+![PageNote demo](PageNote - Demo.gif)
+
+---
 
 ## Features
 
-- 🎤 **Voice Recording**: Record and transcribe voice notes using Deepgram
-- 🤖 **AI Integration**: Chat with AI using OpenAI and Anthropic models
-- 🖼️ **Image Generation**: Generate images using Replicate's Stable Diffusion
-- 📱 **Browser Extension**: Side panel functionality for quick note-taking
-- 🔐 **Authentication**: Secure login with Firebase Auth
-- ☁️ **Cloud Storage**: Save and sync notes with Firebase Database and Storage
-- 📤 **Image Upload**: Upload and manage images
+- Instant capture: open the side panel from any page and start typing
+- Auto-resurface: notes show up again on return visits
+- URL canonicalization: handles URL variations and YouTube video IDs
+- SPA-aware: detects route changes in single-page apps
+- Auto-save: debounced saves while you type
+- Local-only storage: notes stay on your device (no cloud sync)
+- Export + quota status: export all notes and monitor storage usage
+- Badge indicator: shows when a page has a saved note
 
-## Technologies Used
+---
 
-- **Frontend**: React with Next.js 14 App Router
-- **Styling**: TailwindCSS
-- **Backend**: Firebase Auth, Storage, and Database
-- **AI Services**: OpenAI, Anthropic, Replicate via Vercel AI SDK
-- **Voice Processing**: Deepgram API for real-time transcription
-- **Browser Extension**: Chrome Extension API
+## Install (Local / Development)
+
+1. Open Chrome and go to `chrome://extensions/`
+2. Enable Developer mode
+3. Click Load unpacked
+4. Select the `src` folder from this project
+
+---
+
+## Usage
+
+- Open the side panel with `Alt+S` (default) or the toolbar button
+- Write your note; it auto-saves
+- Close the panel with the X button or `Alt+S`
+- Open the dashboard to view/export notes (extension options page)
+
+You can change the shortcut at `chrome://extensions/shortcuts`.
+
+---
 
 ## Project Structure
 
 ```
 src/
-├── app/                 # Next.js App Router pages
-│   ├── api/            # API routes for AI services
-│   └── components/     # React components
-├── lib/                # Utilities and contexts
-│   ├── contexts/       # React contexts for auth and Deepgram
-│   ├── firebase/       # Firebase configuration and utils
-│   └── hooks/          # Custom React hooks
-├── icons/              # Extension icons
-├── manifest.json       # Chrome extension manifest
-├── background.js       # Extension background script
-├── content.js         # Extension content script
-└── sidepanel.html/js   # Extension side panel
+  manifest.json     # Extension manifest
+  background.js     # Service worker (storage, canonical URLs, badge)
+  content.js        # SPA route detection
+  sidepanel.html    # Side panel UI
+  sidepanel.js      # Side panel logic
+  dashboard.html    # Notes dashboard (options page)
+  dashboard.js      # Dashboard logic (list/export)
+  icons/            # Extension icons
 ```
 
-## Getting Started
+---
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
+## Privacy & Storage
 
-2. Set up environment variables for Firebase and AI services
+- Uses Chrome local storage only
+- No external requests or analytics
+- Approximate quota: 5MB total for all notes
 
-3. Run the development server:
-   ```bash
-   npm run dev
-   ```
+---
 
-4. For browser extension development, load the `src` folder as an unpacked extension in Chrome
+## Development Notes
 
-## Template Credit
-
-This project was built using the full-stack template from [@https://github.com/ansh/template-2](https://github.com/ansh/template-2) as a starting point.
+- Canonicalization removes tracking params and normalizes URLs
+- YouTube notes key off the video ID for consistent resurfacing
+- SPA route changes are detected with debounced observers
