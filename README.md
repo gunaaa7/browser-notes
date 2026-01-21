@@ -6,7 +6,7 @@ Friction-free notes attached to web pages. Your notes resurface automatically wh
 
 ## Demo
 
-![PageNote demo](PageNote - Demo.gif)
+![PageNote Demo](./PageNote%20-%20Demo.gif)
 
 ---
 
